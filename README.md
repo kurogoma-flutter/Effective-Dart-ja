@@ -215,14 +215,243 @@ class ToggleComponent {}
 
 # 使用例
 ### ライブラリ
+#### ライブラリやパッケージ、part ofは文字列で記述すべき
+```dart
+// GOOD
+part of '../../my_library.dart';
+// BAD
+part of my_library;
+```
+#### 他のプロジェクトのsrc配下にあるライブラリはインポートしてはいけない
+#### libの外からlibディレクトリ配下のファイルをインポートする場合、libをパスに入れてはいけない。`package:`を用いるべき
+```dart
+// BAD
+import '../lib/api.dart';
 
-### null
+// GOOD
+import 'package:my_package/api.dart';
+```
+
+### Null
+#### 初期値でnullを設定することはしてはならない
+```Dart
+// BAD
+Item? bestItem = null;
+```
+#### メソッドの引数の初期値にnullを設定してはならない
+```dart
+// BAD
+void error([String? message = null]) {
+  stderr.write(message ?? '\n');
+}
+```
+#### nullかどうかでtrue, falseを決めたい場合、`==`ではなく`??`を用いるべき
+```dart
+// BAD
+// If you want null to be false:
+if (optionalThing?.isEnabled ?? false) {
+  print('Have enabled thing.');
+}
+
+// GOOD
+// If you want null to be false:
+if (optionalThing?.isEnabled == true) {
+  print('Have enabled thing.');
+}
+```
+#### 初期化されているか定かではない場合、lateで変数定義をするのは避けるべき
+#### 余計なnullチェックはしない
+```dart
+// BAD
+class UploadException {
+  final Response? response;
+
+  UploadException([this.response]);
+
+  @override
+  String toString() {
+    // ここでnullチェックをするので後続の「！」は不要になる
+    if (response != null) {
+      return 'Could not complete upload to ${response!.url} '
+          '(error code ${response!.errorCode}): ${response!.reason}.';
+    }
+
+    return 'Could not upload (no response).';
+  }
+}
+```
 
 ### String
+#### 文字列に改行がある場合、`+`ではなく隣接させて用いる
+```dart
+// BAD
+raiseAlarm('ERROR: Parts of the spaceship are on fire. Other ' +
+    'parts are overrun by martians. Unclear which are which.');
+
+// GOOD
+raiseAlarm('ERROR: Parts of the spaceship are on fire. Other '
+    'parts are overrun by martians. Unclear which are which.');
+```
+
+#### 文字連結より、補間を用いる
+```dart
+// BAD
+'Hello, ' + name + '! You are ' + (year - birth).toString() + ' y...';
+// GOOD
+'Hello, $name! You are ${year - birth} years old.';
+```
+
+#### 不要な中括弧は避けるべき
+```dart
+// BAD
+var greeting = 'Hi, ${name}! I love your ${decade}s costume.';
+
+// GOOD
+var greeting = 'Hi, $name! I love your ${decade}s costume.';
+```
 
 ### Collections
+#### Map, List, Setの定義は可能な限り以下のように記述すべき
+```dart
+// BAD
+var addresses = Map<String, Address>();
+var counts = Set<int>();
+// GOOD
+var addresses = <String, Address>{};
+var counts = <int>{};
+```
+
+#### collectionのデータの有無を確かめるために`.length()`を用いてはならない
+```dart
+// BAD
+if (lunchBox.length == 0) return 'so hungry...';
+
+// GOOD
+if (lunchBox.isEmpty) return 'so hungry...';
+```
+
+#### 関数内の処理で、`forEach`は避けるべき
+```dart
+// BAD
+people.forEach((person) {
+  ...
+});
+
+// GOOD
+for (final person in people) {
+  ...
+}
+```
+#### `List.from()は使わず、`toList()`を用いるべき
+#### コレクションをデータ型で絞り込みたい場合、`whereType()`を用いるべき
+```dart
+// BAD
+var objects = [1, 'a', 2, 'b', 3];
+var ints = objects.where((e) => e is int).cast<int>();
+
+// GOOD
+var objects = [1, 'a', 2, 'b', 3];
+var ints = objects.whereType<int>();
+
+// (1, 2, 3)
+```
+#### 同じ型だと推定できるのに`cast()`を用いてはならない
+```dart
+var stuff = <dynamic>[1, 2];
+// BAD
+var ints = stuff.toList().cast<int>();
+
+// GOOD
+var ints = List<int>.from(stuff);
+```
+#### そもそも`cast()`は使用を避ける
 
 ### Functions
+#### 関数は内部で関数を定義したい場合、以下のように記述すべき
+```dart
+// BAD
+void main() {
+  var localFunction = () {
+    ...
+  };
+}
+
+// GOOD
+void main() {
+  void localFunction() {
+    ...
+  }
+}
+```
+
+#### `forEach`や`map`は省略できる部分はすべき
+```Dart
+// BAD
+// Method:
+charCodes.forEach((code) {
+  buffer.write(code);
+});
+
+// Named constructor:
+var strings = charCodes.map((code) => String.fromCharCode(code));
+
+// GOOD
+// Method:
+charCodes.forEach(buffer.write);
+
+// Named constructor:
+var strings = charCodes.map(String.fromCharCode);
+```
+#### 名前付き引数の初期値は`=`を用いて設定すべき
+```dart
+// BAD
+void insert(Object item, {int at: 0}) { ... }
+
+// GOOD
+void insert(Object item, {int at = 0}) { ... }
+```
+
+### Variables
+
+#### 変数定義で用いるvarとfinalは適切に使い分けてください
+#### 計算できるものについて、一々分割して保存をしない。
+```dart
+// BAD
+class Circle {
+  double _radius;
+  double get radius => _radius;
+  set radius(double value) {
+    _radius = value;
+    _recalculate();
+  }
+
+  double _area = 0.0;
+  double get area => _area;
+
+  double _circumference = 0.0;
+  double get circumference => _circumference;
+
+  Circle(this._radius) {
+    _recalculate();
+  }
+
+  void _recalculate() {
+    _area = pi * _radius * _radius;
+    _circumference = pi * 2.0 * _radius;
+  }
+}
+
+// GOOD
+class Circle {
+  double radius;
+
+  Circle(this.radius);
+
+  double get area => pi * radius * radius;
+  double get circumference => pi * 2.0 * radius;
+}
+```
+
 
 ### Members
 
