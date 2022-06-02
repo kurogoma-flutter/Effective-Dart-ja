@@ -454,12 +454,132 @@ class Circle {
 
 
 ### Members
+#### getterやsetterが不要な場合、排除すべき
+#### 変更されない値（読み取り専用）の場合、finalを用いたほうがよい
+#### アロー関数で簡潔にできる場合は、そうすべき
+#### クラス内に同名のプロパティがある場合や、名前付きコンストラクタにリダイレクトする場合を除き、`this.`の表現はDartでは不要です
+#### 可能な限り、変数定義の段階で値を入れておくこと
 
 ### Constructors
+#### 可能な限り初期化は簡潔にすること
+```dart
+// BAD
+class Point {
+  double x, y;
+  Point(double x, double y)
+      : x = x,
+        y = y;
+}
+
+// GOOD
+class Point {
+  double x, y;
+  Point(this.x, this.y);
+}
+```
+
+#### コンストラクタの初期化対象の変数に`late`を用いないでください。
+```dart
+// BAD
+class Point {
+  late double x, y;
+  Point.polar(double theta, double radius) {
+    x = cos(theta) * radius;
+    y = sin(theta) * radius;
+  }
+}
+
+// GOOD
+class Point {
+  double x, y;
+  Point.polar(double theta, double radius)
+      : x = cos(theta) * radius,
+        y = sin(theta) * radius;
+}
+```
+#### コンストラクタのbodyが空の場合、`{}`ではなく`;`を用いるべき
+```dart
+// BAD
+class Point {
+  double x, y;
+  Point(this.x, this.y) {}
+}
+
+// GOOD
+class Point {
+  double x, y;
+  Point(this.x, this.y);
+}
+```
+
+#### コンストラクタの生成に`new`は使わない
+#### `const`を（無駄に）重複して使わない
+```dart
+// BAD
+const primaryColors = const [
+  const Color('red', const [255, 0, 0]),
+  const Color('green', const [0, 255, 0]),
+  const Color('blue', const [0, 0, 255]),
+];
+
+// GOOD
+const primaryColors = [
+  Color('red', [255, 0, 0]),
+  Color('green', [0, 255, 0]),
+  Color('blue', [0, 0, 255]),
+];
+```
 
 ### Error handling
+#### `try{}catch{}`の`catch`に`on`を含めないことは避けるべき
+#### onの無いcatchでエラーを補足した場合、破棄してはならない（異常をユーザーに伝えるべき）
+#### 例外で返すエラーは、プログラムエラーに留めるようにしてください。コードバグは伝えないようにすべき。
+#### エラーの型に対し、明示的に受け取ってはならない。例外で処理が止まらず原因の特定に時間を要する。
+#### 例外を再度throwする場合は、`rethrow`を用いるべき
 
 ### Asynchrony（非同期）
+#### 生のFutureメソッドで実装するのではなく、async/awaitを用いるべき
+```dart
+// BAD
+Future<int> countActivePlayers(String teamName) {
+  return downloadTeam(teamName).then((team) {
+    if (team == null) return Future.value(0);
+
+    return team.roster.then((players) {
+      return players.where((player) => player.isActive).length;
+    });
+  }).catchError((e) {
+    log.error(e);
+    return 0;
+  });
+}
+
+// GOOD
+Future<int> countActivePlayers(String teamName) async {
+  try {
+    var team = await downloadTeam(teamName);
+    if (team == null) return 0;
+
+    var players = await team.roster;
+    return players.where((player) => player.isActive).length;
+  } catch (e) {
+    log.error(e);
+    return 0;
+  }
+}
+```
+
+#### 無意味にasyncを用いてはならない
+使っても良い例
+- awaitが伴う場合
+- Future.error()に該当する場合
+- Future.value()に該当する場合
+
+#### CONSIDER using higher-order methods to transform a stream.???
+
+#### completerを直接用いるのは避けるべき
+
+#### DO test for Future<T> when disambiguating a FutureOr<T> whose type argument could be Object.??
 
 # 設計
 ### 命名
