@@ -1,5 +1,8 @@
 # Effective-Dart-ja
-EffectiveDartを簡易的に日本語訳しました（執筆中）
+EffectiveDartを簡易的に日本語訳しました
+### 参考資料
+- [Effective Dart](https://dart.dev/guides/language/effective-dart)
+- [Linter rules](https://dart.dev/tools/linter-rules)
 
 # 命名規約
 ### 識別子
@@ -849,6 +852,93 @@ Iterable<T> where(bool Function(T) predicate) => ...
 #### 非同期関数の返り値の型定義に`FutureOr<T>`のように定義することは避けましょう
 
 ### Parameters（引数）
+#### インスタンスやメソッドの引数にboolだけを指定することは避けましょう
+```dart
+// BAD
+new Task(true);
+new Task(false);
+new ListBox(false, true, true);
+new Button(false);
+```
+#### パラメータを省略したい可能性がある場合、オプションの位置パラメータは避けてください
+#### あえてnullを受け取るような引数の設定は避けてください
+```dart
+// BAD
+var rest = string.substring(start, null);
 
+// GOOD
+var rest = string.substring(start);
+```
+#### 範囲を指定する場合は、開始と終了を含むパラメータを使用します
 
 ### Equality（イコール記号）
+#### `==`をoverrideする場合、`hashCode`でoverrideしてください。
+```dart
+// BAD
+class Bad {
+  final int value;
+  Bad(this.value);
+
+  @override
+  bool operator ==(Object other) => other is Bad && other.value == value;
+}
+
+// GOOD
+class Better {
+  final int value;
+  Better(this.value);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Better &&
+      other.runtimeType == runtimeType &&
+      other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+}
+```
+#### `==`は数学のルールに則って使用してください
+#### mutable（不変）なクラスに対してカスタムな等式を定義することを避ける。
+```dart
+// BAD
+class B {
+  String key;
+  const B(this.key);
+  @override
+  operator ==(other) => other is B && other.key == key;
+  @override
+  int hashCode() => key.hashCode;
+}
+
+// GOOD
+@immutable
+class A {
+  final String key;
+  const A(this.key);
+  @override
+  operator ==(other) => other is A && other.key == key;
+  @override
+  int hashCode() => key.hashCode;
+}
+```
+
+#### `==`で繋いだパラメータをnullableにしないでください
+```dart
+// BAD
+class Person {
+  final String name;
+  // ···
+
+  bool operator ==(Object? other) =>
+      other != null && other is Person && name == other.name;
+}
+
+// GOOD
+class Person {
+  final String name;
+  // ···
+
+  bool operator ==(Object other) => other is Person && name == other.name;
+}
+```
