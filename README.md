@@ -579,21 +579,276 @@ Future<int> countActivePlayers(String teamName) async {
 
 #### completerを直接用いるのは避けるべき
 
-#### DO test for Future<T> when disambiguating a FutureOr<T> whose type argument could be Object.??
+#### `DO test for Future<T> when disambiguating a FutureOr<T> whose type argument could be Object.??`
 
 # 設計
 ### 命名
+####  命名で用いる用語には一貫性を持たせること
+```dart
+// BAD
+renumberPages()      // 誤解を生みやすい
+convertToSomething() // to~ に親の単語は不要です
+wrappedAsSomething() // as~ に親の単語は不要です
+Cartesian            // 馴染みのない用語
+
+// GOOD
+pageCount         // A field.
+updatePageCount() // Consistent with pageCount.
+toSomething()     // Consistent with Iterable's toList().
+asSomething()     // Consistent with List's asMap().
+Point             // 一般的に知られている
+```
+ 
+#### 略語の使用は避ける
+#### 最も説明的（主要）な単語は一番後ろにつける
+```dart
+// BAD
+numPages                  // Not a collection of pages.
+RuleFontFaceCss           // Not a CSS.
+
+// GOOD
+pageCount             // A count (of pages).
+CssFontFaceRule       // A rule for font faces in CSS.
+```
+#### 文章を読むかのようなコード構成にすべき
+```dart
+// BAD
+// Telling errors to empty itself, or asking if it is?
+if (errors.empty) ...
+
+// Toggle what? To what?
+subscription.toggle();
+
+// Filter the monsters with claws *out* or include *only* those?
+monsters.filter((monster) => monster.hasClaws);
+
+// GOOD
+// "If errors is empty..."
+if (errors.isEmpty) ...
+
+// "Hey, subscription, cancel!"
+subscription.cancel();
+
+// "Get the monsters where the monster has claws."
+monsters.where((monster) => monster.hasClaws);
+```
+
+#### bool値以外の変数には名詞を優先してつけるべき
+```dart
+// BAD
+list.deleteItems
+
+// GOOD
+list.length
+context.lineWidth
+quest.rampagingSwampBeast
+```
+#### bool値の変数に対して、形容詞や名刺を優先してつけ、動詞は避けるべき
+```dart
+// BAD
+empty         // 形容詞？名詞？
+withElements  // Elementを内包していそう
+closeable     // インターフェイス的に見える
+
+// GOOD
+isEmpty
+hasElements
+canClose
+```
+#### 名前付き引数にboolがある場合、形容詞や名刺を優先してつけ、動詞は避けるべき
+#### bool値の命名には、ポジティブ表現を用いることを推奨します
+```dart
+// BAD
+if (!socket.isDisconnected && !database.isEmpty) {
+  socket.write(database.read());
+}
+
+// GOOD
+if (socket.isConnected && database.hasData) {
+  socket.write(database.read());
+}
+```
+#### 外部に対して動作をしたり、状態を変える場合の命名は命令形を推奨します
+#### 値を返す関数やメソッドの場合は、名詞や命令形でない動詞を推奨します
+#### 機能やメソッドに注目させたい場合、命令形を推奨します
+```dart
+// GOOD
+var table = database.downloadData();
+var packageVersions = packageGraph.solveConstraints();
+```
+#### メソッド名を`get`で始めるのは避けましょう
+#### オブジェクトの状態を引き渡すメソッドの場合、`to___()`と命名しましょう
+```dart
+list.toSet();
+stackTrace.toString();
+dateTime.toLocal();
+```
+#### オブジェクトが元のメソッドと別の状態を返す場合、`as___()`と命名しましょう
+```dart
+var map = table.asMap();
+var list = bytes.asFloat32List();
+var future = subscription.asFuture();
+```
+#### メソッドのパラメーターを命名に組み込むことは避けましょう
+```dart
+// BAD
+list.addElement(element)
+map.removeKey(key)
+
+// GOOD
+list.add(element);
+map.remove(key);
+```
+#### 慣例的なものがある場合、1文字の命名に従いましょう。
+```dart
+// GOOD
+class Map<K, V> {}
+class Multimap<K, V> {}
+class MapEntry<K, V> {}
+
+class Future<T> {
+  Future<S> then<S>(FutureOr<S> onValue(T value)) => ...
+}
+```
 
 ### ライブラリ
+#### 変数やメソッドはプライベート宣言を優先してください
+#### 同じライブラリに複数のクラスを宣言するようにしてください
 
 ### Class and mixins
+#### 抽象クラス（abstract）を定義する場合、その型は1文字の命名をするのは避けましょう
+#### 静的（static）のみしかないクラスの定義は避けましょう
+```dart
+// BAD
+class DateUtils {
+  static DateTime mostRecent(List<DateTime> dates) {
+    return dates.reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+}
+
+class _Favorites {
+  static const mammal = 'weasel';
+}
+
+// GOOD
+DateTime mostRecent(List<DateTime> dates) {
+  return dates.reduce((a, b) => a.isAfter(b) ? a : b);
+}
+
+const _favoriteMammal = 'weasel';
+```
+ただし、emunの様な扱いをする場合は例外です。
+```dart
+// GOOD
+class Color {
+  static const red = '#f00';
+  static const green = '#0f0';
+  static const blue = '#00f';
+  static const black = '#000';
+  static const white = '#fff';
+}
+```
+
+#### 継承される予定のないクラスを継承するのは避けましょう
+#### クラスが拡張を前提としているかドキュメント（コメント等）に残しましょう
+#### インターフェイスとして用いる前提のないクラスを用いるのは避けましょう
+#### インターフェイスとして実装する前提のクラスの場合、ドキュメント（コメント等）に残しましょう
+#### mixin型を定義する場合は、`mixin`を用いましょう
+#### mixinを意図していない型のものを混在させるのは避けましょう
+#### nullableの場合、Future, Stream, Collection型をreturnすることは避けましょう
+#### 
 
 ### Constructors
+#### サポートされている場合、コンストラクタをconstにするようにしてください
 
 ### Members
+#### フィールドとトップレベル変数をfinalにすることを推奨します
+#### 概念的にプロパティにアクセスする操作には、ゲッターを使用すること
+#### 概念的にプロパティを変更する操作には、セッターを使用すること
+#### 対応するゲッターを持たずにセッターを定義しないでください
+#### オーバーロードを装うために実行時の型テストを使用するのは避けてください
+#### 初期化なしで`late final`で定義をしないでください
+#### 複数メソッドを実行する場合、カスケードを用いましょう
+```dart
+// BAD
+var buffer = StringBuffer()
+    .write('one')
+    .write('two')
+    .write('three');
+    
+// GOOD
+var buffer = StringBuffer()
+  ..write('one')
+  ..write('two')
+  ..write('three');
+```
 
 ### Types（データの型）
+#### 初期値を持たない場合でも、`var`ではなく型を用いて定義しましょう
+#### 明確でない場合、型定義をすること
+#### 冗長な型定義は避けましょう
+```dart
+// BAD
+List<List<Ingredient>> desserts = <List<Ingredient>>[];
+
+// GOOD
+var desserts = <List<Ingredient>>[];
+```
+#### 関数を定義する場合、returnされる型を定義しましょう
+#### 関数のパラメーターにも型定義をしましょう
+#### `map()`や`filter()`関数の引数では型定義をしてはいけません
+```dart
+// BAD
+var names = people.map((Person person) => person.name);
+
+// GOOD
+var names = people.map((person) => person.name);
+```
+#### コンストラクタの`this.`に対して型定義をしてはいけません
+#### 明確に判別できない場合、型定義をしましょう
+#### 型の推測が容易にできる場合、型定義は冗長のためやめましょう
+```dart
+// BAD
+class Downloader {
+  final Completer<String> response = Completer<String>();
+}
+
+// GOOD
+class Downloader {
+  final Completer<String> response = Completer();
+}
+```
+#### 抽象的すぎて不完全な型定義は避けましょう
+```dart
+// BAD
+var completer = Completer<Map>();
+
+// GOOD
+var completer = Completer<Map<String, int>>();
+```
+#### 型の定義ができない、困難な場合でも`dynamic`型を記述しましょう
+#### 関数の場合でも、詳細に型を定義しましょう
+```dart
+// BAD
+bool isValid(String value, Function test) => ...
+
+// GOOD
+bool isValid(String value, bool Function(String) test) => ...
+```
+#### `setter`に戻り値の型を定義しないでください
+#### `typedef`の使用はしないでください
+#### 関数の型定義をする場合、引数に定義する方を優先しましょう
+```dart
+Iterable<T> where(bool predicate(T element)) => ...
+
+// BETTER
+Iterable<T> where(bool Function(T) predicate) => ...
+```
+#### 静的解析を無効にしない限り、`dynamic`型の使用は避けましょう
+#### 値を生成しない非同期（Future）の場合、`void`を定義してください
+#### 非同期関数の返り値の型定義に`FutureOr<T>`のように定義することは避けましょう
 
 ### Parameters（引数）
+
 
 ### Equality（イコール記号）
